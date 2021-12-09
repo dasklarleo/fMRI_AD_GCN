@@ -1,6 +1,9 @@
 import torch
+import random
 import torch.nn
+import numpy as np
 import torch.nn.functional as F
+from torch.nn.modules import padding
 from torch.nn.modules.activation import ReLU
 
 # Method
@@ -47,29 +50,57 @@ class SE_Block(torch.nn.module):
         #output
         output=F.sigmoid(self.W_2(bottle_neck))
         return output
+
+# The first time we call the GCN module, we need to make the features from [Batchsize,ROIs,features] to [Batchsize,heads,ROIs,features] by repeating it heads times
 class GCN(torch.nn.module):
-    def __init__(self,BOLD_signals,dilated_parameter_k):
-        super().__init__()
-        self.BOLD_signals=BOLD_signals
+    def __init__(self,features,dilated_parameter_k):
+        super(GCN,self).__init__()
         self.dilated_parameter_k=dilated_parameter_k
+        self.W=torch.nn.Linear(features,features)
         #GCN with dilated kernel
     def forward(self,Adjancy_Matrix,features):
-        
-        pass
-class Net1(torch.nn.Module):
+        _,index=torch.sort(Adjancy_Matrix,dim=3)
+        index[index==0]=-1
+
+        prob=random.random()
+    #calculate the index 
+        # dilated convolution sample 10 points
+        if(prob<0.8):
+            for i in range(5):
+                index[index==(i+pow(2,self.dilated_parameter_k))]=-1
+            index[index!=-1]=0
+            index[index==-1]=1
+
+        # random convolution sample points sample 10 points (each batchsize is sampled with different points)
+        if(prob>=0.8):
+            pass
+            (batch_size,heads,ROIs,_)=Adjancy_Matrix.shape
+            samples=10
+            random_conv=torch.rand(batch_size,heads,ROIs,ROIs)
+            random_conv[random_conv>=0.9]=1
+            random_conv[random_conv<1]=0
+            index=index*random_conv
+        index+=torch.eye(ROIs,ROIs)
+        #确保只有1而没有2 从而防止对角线出现2
+        index[index>=1]=1
+        #没有添加D^(-1/2)归一化
+        output1=F.relu((self.W(Adjancy_Matrix*index*features)))
+        #ResNet
+        return output1+features
+
+#fusion the infomations in different heads
+class fusion(torch.nn.modules):
+    def __init__(self,heads,batch_size) -> None:
+        super().__init__(fusion,self)
+        self.heads=heads
+        self.conv=torch.nn.Conv2d(in_channels=heads,out_channels=1,stride=1,padding=0)
+    def forward(self,output):
+        return (self.conv(output))
+class MLP(torch.nn.modules):
     def __init__(self):
-        super(Net1, self).__init__()
-        self.conv1 = torch.nn.Conv2d(3, 32, 3, 1, 1)
-        self.dense1 = torch.nn.Linear(32 * 3 * 3, 128)
-        self.dense2 = torch.nn.Linear(128, 10)
+        super().__init__()
+        pass
+    def forward(self):
+        pass
 
-    def forward(self, x):
-        x = F.max_pool2d(F.relu(self.conv(x)), 2)
-        x = x.view(x.size(0), -1)
-        x = F.relu(self.dense1(x))
-        x = self.dense2(x)
-        return x
 
-print("Method 1:")
-model1 = Net1()
-print(model1)
