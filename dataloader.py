@@ -33,6 +33,7 @@ def load_data(data_folder_path, batch_size):
 
     data = np.array(data)
     labels = np.array(labels)
+    labels=labels.reshape((labels.shape[0],1))
     # randomly shuffle the data
     state = np.random.get_state()
     np.random.shuffle(data)
@@ -48,8 +49,10 @@ def load_data(data_folder_path, batch_size):
     # put the data in the dataloader
     train_data = torch.from_numpy(train_data)
     train_labels = torch.from_numpy(train_labels)
+
     valiad_data = torch.from_numpy(valiad_data)
     valiad_labels = torch.from_numpy(valiad_labels)
+
     train_dataset = TensorDataset(train_data, train_labels)
     valid_dataset = TensorDataset(valiad_data, valiad_labels)
     # dataloader
@@ -61,7 +64,7 @@ def load_data(data_folder_path, batch_size):
 
 
 if __name__ == '__main__':
-    data, labels = load_data("/home/leosher/data/pet/fMRI_BOLD/par100")
+    data, labels = load_data("/home/leosher/data/pet/fMRI_BOLD/par100",16)
     print(len(data))
     print(data)
     print(labels)
