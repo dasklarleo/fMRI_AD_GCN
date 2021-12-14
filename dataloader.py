@@ -17,23 +17,23 @@ def load_data(data_folder_path, batch_size):
         if 'DFC' in file:
             continue
         elif 'NC' in file:
-            labels.append(1)
+            labels.append(0)
         elif 'AD' in file:
-            labels.append(2)
+            labels.append(1)
         elif 'EMCI' in file:
-            labels.append(3)
+            labels.append(2)
         elif 'LMCI' in file:
-            labels.append(4)
+            labels.append(3)
         elif 'SMC' in file:
-            labels.append(5)
+            labels.append(4)
         elif 'MCI' in file:
-            labels.append(6)
+            labels.append(5)
         ROI_BOLDs = scio.loadmat(data_folder_path+'/'+file)['ROI_ts']
         data.append(ROI_BOLDs)
 
     data = np.array(data)
     labels = np.array(labels)
-    labels=labels.reshape((labels.shape[0],1))
+    labels=labels.reshape((labels.shape[0]))
     # randomly shuffle the data
     state = np.random.get_state()
     np.random.shuffle(data)

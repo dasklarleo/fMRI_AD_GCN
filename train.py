@@ -24,7 +24,8 @@ learning_rate = 0.001
 num_epoches = 100
 
 if __name__ == '__main__':
-    pass
+    torch.autograd.set_detect_anomaly(True)
+    CUDA_LAUNCH_BLOCKING=1
     # load data
     train_loader,valid_loader = dataloader.load_data("/home/leosher/data/pet/fMRI_BOLD/par"+str(BOLD_nums), batch_size)
     # initialize the network
@@ -50,6 +51,7 @@ if __name__ == '__main__':
             loss=criterion(scores,target)
     # backward
             optimizer.zero_grad()
+            print("*"*12)
             loss.backward()
     # gradient desecnt or adam step
             optimizer.step()
