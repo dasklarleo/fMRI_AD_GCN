@@ -57,9 +57,9 @@ def load_data(data_folder_path, batch_size):
     valid_dataset = TensorDataset(valiad_data, valiad_labels)
     # dataloader
     train_loader = DataLoader(dataset=train_dataset,
-                              batch_size=batch_size, shuffle=True)
+                              batch_size=batch_size, shuffle=True,drop_last=True)
     valid_loader = DataLoader(dataset=valid_dataset,
-                              batch_size=batch_size, shuffle=True)
+                              batch_size=batch_size, shuffle=True,drop_last=True)
     return train_loader, valid_loader
 
 
