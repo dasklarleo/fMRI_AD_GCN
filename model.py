@@ -104,18 +104,21 @@ class GCN(torch.nn.Module):
         super(GCN, self).__init__()
         self.dilated_parameter_k = dilated_parameter_k
         self.W = torch.nn.Linear(features, features)
+
         # GCN with dilated kernel
 
     def forward(self, Adjancy_Matrix, features):
+        print("here! "*20)
+        print(Adjancy_Matrix.shape)
         _, index = torch.sort(Adjancy_Matrix, descending=True, dim=3)
         index[index == 0] = -1
         (batch_size, heads, ROIs, _) = Adjancy_Matrix.shape
 
         prob = random.random()
         # calculate the index
-        # dilated convolution sample 10 points
+        # dilated convolution with paramter
         if (prob < 0.8):
-            for i in range(8):
+            for i in range(self.dilated_parameter_k):
                 index[index == (i + pow(2, self.dilated_parameter_k))] = -1
             index[index != -1] = 0
             index[index == -1] = 1
@@ -137,6 +140,25 @@ class GCN(torch.nn.Module):
                 torch.matmul(
                     torch.mul(Adjancy_Matrix, index),
                     features))), inplace=False)
+        # ResNet
+        return output1 + features
+
+
+class VanillaGCN(torch.nn.Module):
+    def __init__(self, features_in,features_out ,dilated_parameter_k):
+        super(VanillaGCN, self).__init__()
+        self.dilated_parameter_k = dilated_parameter_k
+        self.W = torch.nn.Linear(features_in, features_out)
+
+        # Vanilla GCN
+
+    def forward(self, Adjancy_Matrix, features,W):
+
+        output1 = F.relu(
+            (self.W(
+                torch.matmul(
+                    Adjancy_Matrix,features))), 
+                        inplace=False)
         # ResNet
         return output1 + features
 

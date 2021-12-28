@@ -75,7 +75,7 @@ if __name__ == '__main__':
     criterion=nn.CrossEntropyLoss()
     optimizer=optim.Adam(net.parameters(),lr=learning_rate)
     # train the network
-    for epoch in range(200):# one epoch means that the net has seen all the data in the dataset
+    for epoch in range(1):# one epoch means that the net has seen all the data in the dataset
         for batch_idx,(data,target) in enumerate(train_loader):
             print("epoch",epoch,"batch_idx:",batch_idx)
             data=data.to(device)
