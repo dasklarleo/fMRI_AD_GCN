@@ -9,18 +9,22 @@ import scipy.io as scio
 import math
 
 
-def load_data(data_folder_path, batch_size):
-    data = []
-    labels = []
-    files = os.listdir(data_folder_path)
+def load_data(data_train_folder_path,data_test_folder_path,batch_size):
+    data_train = []
+    data_test=[]
+    labels_train = []
+    labels_test=[]
+
+    files = os.listdir(data_train_folder_path)
     for file in files:
         if 'DFC' in file:
             continue
-        elif 'NC' in file:
-            labels.append(0)
-        elif 'AD' in file:
-            labels.append(1)
+        if 'NC' in file:
+            labels_train.append(0)
         elif 'EMCI' in file:
+            labels_train.append(1)
+        '''
+        elif 'AD' in file:
             labels.append(2)
         elif 'LMCI' in file:
             labels.append(3)
@@ -28,37 +32,69 @@ def load_data(data_folder_path, batch_size):
             labels.append(4)
         elif 'MCI' in file:
             labels.append(5)
-        ROI_BOLDs = scio.loadmat(data_folder_path+'/'+file)['ROI_ts']
-        data.append(ROI_BOLDs)
+        '''
+        ROI_BOLDs = scio.loadmat(data_train_folder_path+'/'+file)['ROI_ts']
+        data_train.append(ROI_BOLDs)
 
-    data = np.array(data)
-    labels = np.array(labels)
-    labels=labels.reshape((labels.shape[0]))
+    data_train = np.array(data_train)
+    labels_train = np.array(labels_train)
+    labels_train=labels_train.reshape((labels_train.shape[0]))
     # randomly shuffle the data
     state = np.random.get_state()
-    np.random.shuffle(data)
+    np.random.shuffle(data_train)
     np.random.set_state(state)
-    np.random.shuffle(labels)
-    # cut the data into training data and valiadation data
-    data_len = data.shape[0]
-    train_len = math.ceil(data_len*0.8)
-    train_data = data[0:train_len]
-    valiad_data = data[train_len:data_len]
-    train_labels = labels[0:train_len]
-    valiad_labels = labels[train_len:data_len]
-    # put the data in the dataloader
-    train_data = torch.from_numpy(train_data)
-    train_labels = torch.from_numpy(train_labels)
+    np.random.shuffle(labels_train)
+###################################################
+##############TEST   DATA##########################
+    files = os.listdir(data_test_folder_path)
+    for file in files:
+        if 'DFC' in file:
+            continue
+        if 'NC' in file:
+            labels_test.append(0)
+        elif 'EMCI' in file:
+            labels_test.append(1)
+        '''
+        elif 'AD' in file:
+            labels.append(2)
+        elif 'LMCI' in file:
+            labels.append(3)
+        elif 'SMC' in file:
+            labels.append(4)
+        elif 'MCI' in file:
+            labels.append(5)
+        '''
+        ROI_BOLDs = scio.loadmat(data_test_folder_path+'/'+file)['ROI_ts']
+        data_test.append(ROI_BOLDs)
 
-    valiad_data = torch.from_numpy(valiad_data)
-    valiad_labels = torch.from_numpy(valiad_labels)
+    data_test = np.array(data_test)
+    labels_test = np.array(labels_test)
+    labels_test=labels_test.reshape((data_test.shape[0]))
+    # randomly shuffle the data
+    state = np.random.get_state()
+    np.random.shuffle(data_test)
+    np.random.set_state(state)
+    np.random.shuffle(labels_test)
+
+
+
+
+
+    print("total train num: ",labels_train.shape[0]," eMCI num: ",(labels_train> 0).sum()," NC num: ",(labels_train<1).sum())
+    print("total test num: ",labels_test.shape[0]," eMCI num: ",(labels_test >0).sum()," NC num: ",(labels_test<1).sum())
+    # put the data in the dataloader
+    train_data = torch.from_numpy(data_train)
+    train_labels = torch.from_numpy(labels_train)
+
+    test_data = torch.from_numpy(data_test)
+    test_labels = torch.from_numpy(labels_test)
 
     train_dataset = TensorDataset(train_data, train_labels)
-    valid_dataset = TensorDataset(valiad_data, valiad_labels)
+    test_dataset = TensorDataset(test_data, test_labels)
     # dataloader
     train_loader = DataLoader(dataset=train_dataset,
                               batch_size=batch_size, shuffle=True,drop_last=True)
-    valid_loader = DataLoader(dataset=valid_dataset,
+    valid_loader = DataLoader(dataset=test_dataset,
                               batch_size=batch_size, shuffle=True,drop_last=True)
     return train_loader, valid_loader
 
