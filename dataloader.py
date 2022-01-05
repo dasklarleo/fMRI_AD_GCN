@@ -34,7 +34,7 @@ def load_data(data_train_folder_path,data_test_folder_path,batch_size):
             labels.append(5)
         '''
         ROI_BOLDs = scio.loadmat(data_train_folder_path+'/'+file)['ROI_ts']
-        data_train.append(ROI_BOLDs)
+        data_train.append(ROI_BOLDs.T)
 
     data_train = np.array(data_train)
     labels_train = np.array(labels_train)
@@ -44,8 +44,10 @@ def load_data(data_train_folder_path,data_test_folder_path,batch_size):
     np.random.shuffle(data_train)
     np.random.set_state(state)
     np.random.shuffle(labels_train)
+    print(data_train.shape)
 ###################################################
 ##############TEST   DATA##########################
+###################################################
     files = os.listdir(data_test_folder_path)
     for file in files:
         if 'DFC' in file:
@@ -65,11 +67,12 @@ def load_data(data_train_folder_path,data_test_folder_path,batch_size):
             labels.append(5)
         '''
         ROI_BOLDs = scio.loadmat(data_test_folder_path+'/'+file)['ROI_ts']
-        data_test.append(ROI_BOLDs)
+        data_test.append(ROI_BOLDs.T)
 
     data_test = np.array(data_test)
     labels_test = np.array(labels_test)
     labels_test=labels_test.reshape((data_test.shape[0]))
+    print(data_test.shape)
     # randomly shuffle the data
     state = np.random.get_state()
     np.random.shuffle(data_test)

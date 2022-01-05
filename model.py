@@ -14,73 +14,63 @@ from torch.nn.modules.activation import ReLU
 
 
 class Transofrmer(torch.nn.Module):
-    def __init__(self, BatchSize, ROIs, heads, BOLDs, q):
+    def __init__(self, BatchSize, ROIs, BOLDs, q):
         super(Transofrmer, self).__init__()
         self.BatchSize = BatchSize
         self.ROIs = ROIs
-        self.heads = heads
         self.q = q
 
-        self.div_q = torch.tensor(q)
-        self.threshold = torch.tensor(0.01)
+        self.threshold = torch.tensor(0.00001)
         self.threshold = Variable(self.threshold.double(),
                                   requires_grad=True).to(
                                       "cuda") 
 
-        self.linear_q = torch.nn.Linear(BOLDs, heads * q)
-        self.linear_k = torch.nn.Linear(BOLDs, heads * q)
+        self.linear_q = torch.nn.Linear(BOLDs, q)
+        self.linear_k = torch.nn.Linear(BOLDs, q)
         self.relu_layer = torch.nn.ReLU(inplace=False)
-        self.sofmax_layer = torch.nn.Softmax(dim=3)
+
+        self.bn=torch.nn.BatchNorm1d(300)
 
     def forward(self, x):
         # affine and get Q & K
-        """
-        遇到了这个问题RuntimeError: expected scalar type Double but found Float
-        尝试:net=net.double()
-        """
         x = x.double()
-        Q = self.linear_q(x)
-        Q = Q.reshape((self.BatchSize, self.ROIs, self.heads, self.q))
-        K = self.linear_k(x).reshape(
-            (self.BatchSize, self.ROIs, self.heads, self.q))
-        # reallign to make Q:[BatchSize,heads,ROIs,q],K:[BatchSize,heads,q,ROIs]
-        Q = Q.permute(0, 2, 1, 3).double()
-        K = K.permute(0, 2, 3, 1).double()
 
+        Q = self.linear_q(x).reshape(
+            (self.BatchSize, self.ROIs, self.q))
+        K = self.linear_k(x).reshape(
+            (self.BatchSize, self.q,self.ROIs))
 
         relation = torch.matmul(Q, K).double()
 
-        relation = relation/(self.div_q)
-
-        relation = F.softmax(relation,dim=3)
-        relation =relation - self.threshold
+        #relation = relation/self.q
+        relation=self.bn(relation)
+        relation = F.softmax(relation,dim=2)
+        #relation =relation - self.threshold
 
 
         relation = self.relu_layer(relation)
         return relation
 
-# from [Batchsize,ROIs,features] to [Batchsize,heads,ROIs,features] by repeating it heads times
-
 
 class VanillaGCN(torch.nn.Module):
-    def __init__(self, features_in, features_out, dilated_parameter_k):
+    def __init__(self, features_in, features_out):
         super(VanillaGCN, self).__init__()
-        self.dilated_parameter_k = dilated_parameter_k
         self.W = torch.nn.Linear(features_in, features_out)
-        self.batch_normalization=torch.nn.BatchNorm1d(130)        
+        self.batch_normalization=torch.nn.BatchNorm1d(300)        
     def forward(self, Adjancy_Matrix, features):
 
-        output = F.relu(self.batch_normalization(self.W(torch.matmul(Adjancy_Matrix, features))),
+        output = F.relu(
+            self.batch_normalization(
+                self.W(torch.matmul(Adjancy_Matrix, features))),
                          inplace=False)
 
         return output
 
 class VanillaResGCN(torch.nn.Module):
-    def __init__(self, features_in, features_out, dilated_parameter_k):
+    def __init__(self, features_in, features_out):
         super(VanillaResGCN, self).__init__()
-        self.dilated_parameter_k = dilated_parameter_k
         self.W = torch.nn.Linear(features_in, features_out)
-        self.batch_normalization=torch.nn.BatchNorm1d(130)
+        self.batch_normalization=torch.nn.BatchNorm1d(300)
     def forward(self, Adjancy_Matrix, features):
         output1 = F.relu(
             self.batch_normalization(
@@ -117,9 +107,9 @@ Output the classfication informations
 class MLP(torch.nn.Module):
     def __init__(self, heads):
         super(MLP, self).__init__()
-        self.MLP1 = torch.nn.Linear(130*16,512)
-        self.MLP2 = torch.nn.Linear(512, 32)
-        self.MLP3 = torch.nn.Linear(32,2)
+        self.MLP1 = torch.nn.Linear(300*2,128)
+        self.MLP2 = torch.nn.Linear(128, 16)
+        self.MLP3 = torch.nn.Linear(16,2)
 
     def forward(self, fusion_output):
 
@@ -131,34 +121,41 @@ class MLP(torch.nn.Module):
 
 
 class whole_network(torch.nn.Module):
-    def __init__(self, batch_size, ROI_nums, heads, BOLD_nums, q, SE_parameter,
-                 feature_nums, dilated_parameter_k):
+    def __init__(self, batch_size, ROI_nums, BOLD_nums, q, 
+                 feature_nums):
         super(whole_network, self).__init__()
-        self.heads = heads
         self.batch_size = batch_size
         self.feature_nums = feature_nums
         self.ROI_nums = ROI_nums
         self.BOLD_nums = BOLD_nums  # BOLD信号采样的个数
         self.q = q
-        self.softmax_layer=torch.nn.Softmax(dim=3)
-        self.transofrmer = Transofrmer(batch_size, ROI_nums, heads, BOLD_nums,
+        self.transofrmer = Transofrmer(batch_size, ROI_nums, BOLD_nums,
                                        q)
 
         # vanilla GCN
-        self.vanilla_gcn_layer1 = VanillaGCN(feature_nums, 256, 0)
-        self.vanilla_gcn_layer2 = VanillaResGCN(256, 256, 0)
-        self.vanilla_gcn_layer3 = VanillaGCN(256, 128, 0)
-        self.vanilla_gcn_layer4 = VanillaResGCN(128, 128, 0)
-        self.vanilla_gcn_layer5 = VanillaGCN(128, 64, 0)
-        self.vanilla_gcn_layer6 = VanillaResGCN(64, 64, 0)
-        self.vanilla_gcn_layer7 = VanillaGCN(64, 32, 0)
-        self.vanilla_gcn_layer8 = VanillaResGCN(32, 32, 0)
-        self.vanilla_gcn_layer9 = VanillaGCN(32, 16, 0)
-        self.vanilla_gcn_layer10 = VanillaResGCN(16, 16, 0)
+        self.vanilla_gcn_layer1 = VanillaGCN(feature_nums, 128)
+        self.vanilla_gcn_layer2 = VanillaResGCN(128, 128)
+        self.vanilla_gcn_layer3 = VanillaGCN(128, 64)
+        self.vanilla_gcn_layer4 = VanillaResGCN(64, 64)
+        self.vanilla_gcn_layer5 = VanillaGCN(64, 32)
+        self.vanilla_gcn_layer6 = VanillaResGCN(32, 32)
+        self.vanilla_gcn_layer7 = VanillaGCN(32, 8)
+        self.vanilla_gcn_layer8 = VanillaResGCN(8, 8)
+        self.vanilla_gcn_layer9 = VanillaGCN(8, 2)
+        self.vanilla_gcn_layer10 = VanillaResGCN(2, 2)
 
-        self.fusion = Fusion(heads)
         self.mlp = MLP(feature_nums)
 
+        for m in self.modules():
+            if isinstance(m, torch.nn.Conv2d):
+                torch.nn.init.kaiming_normal_(m.weight,nonlinearity='relu')
+            elif isinstance(m, (torch.nn.BatchNorm1d)):
+                torch.nn.init.constant_(m.weight, 1)
+                torch.nn.init.constant_(m.bias, 0)
+            elif isinstance(m,torch.nn.Linear):
+                torch.nn.init.kaiming_normal_(m.weight,nonlinearity='relu')
+                torch.nn.init.constant_(m.bias, 0.0)   
+                    
     def forward(self, BOLD_signals):  # BOLD_signals[batch_size,ROIs,features]
         BOLD_signals = torch.where(torch.isnan(BOLD_signals),
                                    torch.full_like(BOLD_signals, 0),
@@ -167,7 +164,6 @@ class whole_network(torch.nn.Module):
         # relation[batch_size,heads,ROIs,ROIs]
         relation_matrix= self.transofrmer(BOLD_signals)
 
-        relation_matrix=self.fusion(relation_matrix)
 
         vanilla_GCN_output1 = self.vanilla_gcn_layer1(relation_matrix,BOLD_signals)
         vanilla_GCN_output2 = self.vanilla_gcn_layer2(relation_matrix,vanilla_GCN_output1) 
@@ -181,5 +177,5 @@ class whole_network(torch.nn.Module):
         vanilla_GCN_output10 = self.vanilla_gcn_layer10(relation_matrix,vanilla_GCN_output9)        
         # predict_labels:[batch_size,labels]
 
-        predict_labels = torch.softmax(self.mlp(vanilla_GCN_output10),dim=1)
+        predict_labels = self.mlp(vanilla_GCN_output10)
         return predict_labels
