@@ -1,12 +1,14 @@
 # dataloader: load the data from the matlab file
 from numpy.core.fromnumeric import shape
 import torch
+from torch.cuda import random
 from torch.utils.data import Dataset, DataLoader, TensorDataset
 from torch.utils.data.sampler import SubsetRandomSampler
 import numpy as np
 import os
 import scipy.io as scio
 import math
+import random
 
 
 def load_data(data_train_folder_path,data_test_folder_path,batch_size):
@@ -16,12 +18,13 @@ def load_data(data_train_folder_path,data_test_folder_path,batch_size):
     labels_test=[]
 
     files = os.listdir(data_train_folder_path)
+    random.shuffle(files)
     for file in files:
         if 'DFC' in file:
             continue
-        if 'NC' in file:
+        if 'NC' in file:#70%
             labels_train.append(0)
-        elif 'EMCI' in file:
+        elif 'EMCI' in file:#30%
             labels_train.append(1)
         '''
         elif 'AD' in file:
@@ -40,10 +43,7 @@ def load_data(data_train_folder_path,data_test_folder_path,batch_size):
     labels_train = np.array(labels_train)
     labels_train=labels_train.reshape((labels_train.shape[0]))
     # randomly shuffle the data
-    state = np.random.get_state()
-    np.random.shuffle(data_train)
-    np.random.set_state(state)
-    np.random.shuffle(labels_train)
+
     print(data_train.shape)
 ###################################################
 ##############TEST   DATA##########################
@@ -74,14 +74,6 @@ def load_data(data_train_folder_path,data_test_folder_path,batch_size):
     labels_test=labels_test.reshape((data_test.shape[0]))
     print(data_test.shape)
     # randomly shuffle the data
-    state = np.random.get_state()
-    np.random.shuffle(data_test)
-    np.random.set_state(state)
-    np.random.shuffle(labels_test)
-
-
-
-
 
     print("total train num: ",labels_train.shape[0]," eMCI num: ",(labels_train> 0).sum()," NC num: ",(labels_train<1).sum())
     print("total test num: ",labels_test.shape[0]," eMCI num: ",(labels_test >0).sum()," NC num: ",(labels_test<1).sum())

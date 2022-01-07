@@ -20,13 +20,11 @@ class Transofrmer(torch.nn.Module):
         self.ROIs = ROIs
         self.q = q
 
-        self.threshold = torch.tensor(0.00001)
-        self.threshold = Variable(self.threshold.double(),
-                                  requires_grad=True).to(
-                                      "cuda") 
+        #self.threshold = torch.tensor(0.00001)
+        #self.threshold = Variable(self.threshold.double(), requires_grad=True).to("cuda") 
 
         self.linear_q = torch.nn.Linear(BOLDs, q)
-        self.linear_k = torch.nn.Linear(BOLDs, q)
+        #self.linear_k = torch.nn.Linear(BOLDs, q)
         self.relu_layer = torch.nn.ReLU(inplace=False)
 
         self.bn=torch.nn.BatchNorm1d(300)
@@ -37,7 +35,7 @@ class Transofrmer(torch.nn.Module):
 
         Q = self.linear_q(x).reshape(
             (self.BatchSize, self.ROIs, self.q))
-        K = self.linear_k(x).reshape(
+        K = self.linear_q(x).reshape(
             (self.BatchSize, self.q,self.ROIs))
 
         relation = torch.matmul(Q, K).double()
@@ -133,12 +131,12 @@ class whole_network(torch.nn.Module):
                                        q)
 
         # vanilla GCN
-        self.vanilla_gcn_layer1 = VanillaGCN(feature_nums, 128)
-        self.vanilla_gcn_layer2 = VanillaResGCN(128, 128)
-        self.vanilla_gcn_layer3 = VanillaGCN(128, 64)
-        self.vanilla_gcn_layer4 = VanillaResGCN(64, 64)
-        self.vanilla_gcn_layer5 = VanillaGCN(64, 32)
-        self.vanilla_gcn_layer6 = VanillaResGCN(32, 32)
+        self.vanilla_gcn_layer1 = VanillaGCN(feature_nums, 64)
+        self.vanilla_gcn_layer2 = VanillaResGCN(64, 64)
+        self.vanilla_gcn_layer3 = VanillaGCN(64, 16)
+        self.vanilla_gcn_layer4 = VanillaResGCN(16 ,16)
+        self.vanilla_gcn_layer5 = VanillaGCN(16, 2)
+        self.vanilla_gcn_layer6 = VanillaResGCN(2, 2)
         self.vanilla_gcn_layer7 = VanillaGCN(32, 8)
         self.vanilla_gcn_layer8 = VanillaResGCN(8, 8)
         self.vanilla_gcn_layer9 = VanillaGCN(8, 2)
@@ -170,12 +168,14 @@ class whole_network(torch.nn.Module):
         vanilla_GCN_output3 = self.vanilla_gcn_layer3(relation_matrix,vanilla_GCN_output2) 
         vanilla_GCN_output4 = self.vanilla_gcn_layer4(relation_matrix,vanilla_GCN_output3) 
         vanilla_GCN_output5 = self.vanilla_gcn_layer5(relation_matrix,vanilla_GCN_output4) 
-        vanilla_GCN_output6 = self.vanilla_gcn_layer6(relation_matrix,vanilla_GCN_output5) 
+        vanilla_GCN_output6 = self.vanilla_gcn_layer6(relation_matrix,vanilla_GCN_output5)
+        '''
         vanilla_GCN_output7 = self.vanilla_gcn_layer7(relation_matrix,vanilla_GCN_output6) 
         vanilla_GCN_output8 = self.vanilla_gcn_layer8(relation_matrix,vanilla_GCN_output7) 
         vanilla_GCN_output9 = self.vanilla_gcn_layer9(relation_matrix,vanilla_GCN_output8) 
-        vanilla_GCN_output10 = self.vanilla_gcn_layer10(relation_matrix,vanilla_GCN_output9)        
+        vanilla_GCN_output10 = self.vanilla_gcn_layer10(relation_matrix,vanilla_GCN_output9)
+        '''         
         # predict_labels:[batch_size,labels]
 
-        predict_labels = self.mlp(vanilla_GCN_output10)
+        predict_labels = self.mlp(vanilla_GCN_output6)
         return predict_labels
