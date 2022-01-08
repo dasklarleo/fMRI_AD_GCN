@@ -27,16 +27,16 @@ class Transofrmer(torch.nn.Module):
         #self.linear_k = torch.nn.Linear(BOLDs, q)
         self.relu_layer = torch.nn.ReLU(inplace=False)
 
-        self.bn=torch.nn.BatchNorm1d(300)
+        self.bn=torch.nn.BatchNorm1d(100)
 
     def forward(self, x):
         # affine and get Q & K
         x = x.double()
 
         Q = self.linear_q(x).reshape(
-            (self.BatchSize, self.ROIs, self.q))
+            (-1, self.ROIs, self.q))
         K = self.linear_q(x).reshape(
-            (self.BatchSize, self.q,self.ROIs))
+            (-1, self.q,self.ROIs))
 
         relation = torch.matmul(Q, K).double()
 
@@ -54,7 +54,7 @@ class VanillaGCN(torch.nn.Module):
     def __init__(self, features_in, features_out):
         super(VanillaGCN, self).__init__()
         self.W = torch.nn.Linear(features_in, features_out)
-        self.batch_normalization=torch.nn.BatchNorm1d(300)        
+        self.batch_normalization=torch.nn.BatchNorm1d(100)        
     def forward(self, Adjancy_Matrix, features):
 
         output = F.relu(
@@ -68,7 +68,7 @@ class VanillaResGCN(torch.nn.Module):
     def __init__(self, features_in, features_out):
         super(VanillaResGCN, self).__init__()
         self.W = torch.nn.Linear(features_in, features_out)
-        self.batch_normalization=torch.nn.BatchNorm1d(300)
+        self.batch_normalization=torch.nn.BatchNorm1d(100)
     def forward(self, Adjancy_Matrix, features):
         output1 = F.relu(
             self.batch_normalization(
@@ -105,17 +105,17 @@ Output the classfication informations
 class MLP(torch.nn.Module):
     def __init__(self, heads):
         super(MLP, self).__init__()
-        self.MLP1 = torch.nn.Linear(300*2,128)
-        self.MLP2 = torch.nn.Linear(128, 16)
-        self.MLP3 = torch.nn.Linear(16,2)
+        self.MLP1 = torch.nn.Linear(100*2,16)
+        self.MLP2 = torch.nn.Linear(16, 2)
+        #self.MLP3 = torch.nn.Linear(16,2)
 
     def forward(self, fusion_output):
 
         fusion_output1 = fusion_output.reshape(fusion_output.shape[0],-1)
         predict_labels = F.relu(self.MLP1(fusion_output1), inplace=False)
         predict_labels1 = F.relu(self.MLP2(predict_labels), inplace=False)
-        predict_labels2 = F.relu(self.MLP3(predict_labels1), inplace=False)
-        return predict_labels2
+        #predict_labels2 = F.relu(self.MLP3(predict_labels1), inplace=False)
+        return predict_labels1
 
 
 class whole_network(torch.nn.Module):
@@ -177,5 +177,5 @@ class whole_network(torch.nn.Module):
         '''         
         # predict_labels:[batch_size,labels]
 
-        predict_labels = self.mlp(vanilla_GCN_output6)
+        predict_labels = (self.mlp(vanilla_GCN_output6))
         return predict_labels

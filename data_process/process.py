@@ -15,8 +15,8 @@ def delete(folder_path,keyword):
 
 
 if __name__ == '__main__':
-    delete("/home/leosher/data/pet/fMRI_BOLD/two_300/NC/",'DFC')
-    delete("/home/leosher/data/pet/fMRI_BOLD/two_300/MCI/",'DFC')
-    delete("/home/leosher/data/pet/fMRI_BOLD/two_300/eMCI/",'DFC')
-    delete("/home/leosher/data/pet/fMRI_BOLD/two_300/LMCI/",'DFC')
-    delete("/home/leosher/data/pet/fMRI_BOLD/two_300/smc/",'DFC')
+    delete("/home/leosher/data/pet/fMRI_BOLD/par100/NC/",'DFC')
+    delete("/home/leosher/data/pet/fMRI_BOLD/par100/MCI/",'DFC')
+    delete("/home/leosher/data/pet/fMRI_BOLD/par100/eMCI/",'DFC')
+    delete("/home/leosher/data/pet/fMRI_BOLD/par100/LMCI/",'DFC')
+    delete("/home/leosher/data/pet/fMRI_BOLD/par100/AD/",'DFC')

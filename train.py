@@ -11,6 +11,7 @@ import torch.nn as nn
 import matplotlib.pyplot as plt
 import torch.optim as optim
 import copy
+from sklearn.metrics import roc_auc_score
 #from tensorboardX import SummaryWriter
 torch.autograd.set_detect_anomaly(True)
 CUDA_LAUNCH_BLOCKING=1
@@ -19,12 +20,12 @@ CUDA_LAUNCH_BLOCKING=1
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
 print(device)
 # set parameters
-batch_size = 16
-ROI_nums = 300
+batch_size = 8
+ROI_nums = 100
 BOLD_nums = 130
 q = 16
 feature_nums = 130
-learning_rate = 0.0002
+learning_rate = 0.001
 num_epoches = 10
 
 sens=[]
@@ -87,7 +88,7 @@ def get_logger(logger_name,log_file,level=logging.INFO):
 
 if __name__ == '__main__':
     # load data
-    train_loader,test_loader = dataloader.load_data("/home/leosher/data/pet/fMRI_BOLD/train","/home/leosher/data/pet/fMRI_BOLD/test",batch_size=batch_size)
+    train_loader,test_loader = dataloader.load_data("/home/leosher/data/pet/fMRI_BOLD/par100/NC_eMCI/train","/home/leosher/data/pet/fMRI_BOLD/par100/NC_eMCI/test",batch_size=batch_size)
     log_backward='/home/leosher/桌面/project/fMRI_AD_GCN/log/log_gradient.log'
     log_loss='/home/leosher/桌面/project/fMRI_AD_GCN/log/log_loss.log'
     log_backward=get_logger('log_backward',log_backward)
@@ -105,7 +106,7 @@ if __name__ == '__main__':
     loss_all=[]
     loss_average=0
     # train the network
-    for epoch in range(120):# one epoch means that the net has seen all the data in the dataset
+    for epoch in range(50):# one epoch means that the net has seen all the data in the dataset
         for batch_idx,(data,target) in enumerate(train_loader):
             net.train()
             data=data.to(device)
@@ -113,23 +114,24 @@ if __name__ == '__main__':
             # forward
             scores=net(data)
             loss=criterion(scores,target)
-            print(target)
             print(loss)
             record_info='epoch: '+str(epoch)+" iteration: "+str(batch_idx)+" loss: "+str(loss.item())
-            log_loss.info(record_info)
+            #log_loss.info(record_info)
             loss_average=loss_average+loss.item()
             # backward
             optimizer.zero_grad()
             loss.backward()
+            '''
             for name, parms in net.named_parameters():	
                 log_backward.info('epoch: '+str(epoch)+' batch index: '+str(batch_idx)+'-->name '+str(name)+' -->grad_requirs: '+str(parms.requires_grad)+\
 		            ' -->grad_value: '+str(parms.grad))
+            '''
             optimizer.step()
             
         loss_average=loss_average/(batch_idx+1)
         loss_all.append(loss_average)
         loss_average=0
-        if epoch%10==0:
+        if epoch%2==0:
             print("*"*10)
             print("epoch:", epoch)
             check_accuracy(test_loader,net)
@@ -145,6 +147,7 @@ if __name__ == '__main__':
     plt.figure()      
     plt.plot(loss_all)
     plt.savefig('/home/leosher/桌面/project/fMRI_AD_GCN/loss.jpg')
+    plt.figure()
     plt.plot(f1)
     plt.savefig('/home/leosher/桌面/project/fMRI_AD_GCN/f1.jpg')
     check_accuracy(train_loader,net)  

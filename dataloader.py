@@ -23,9 +23,9 @@ def load_data(data_train_folder_path,data_test_folder_path,batch_size):
         if 'DFC' in file:
             continue
         if 'NC' in file:#70%
-            labels_train.append(0)
-        elif 'EMCI' in file:#30%
             labels_train.append(1)
+        elif 'EMCI' in file:#30%
+            labels_train.append(0)
         '''
         elif 'AD' in file:
             labels.append(2)
@@ -53,9 +53,9 @@ def load_data(data_train_folder_path,data_test_folder_path,batch_size):
         if 'DFC' in file:
             continue
         if 'NC' in file:
-            labels_test.append(0)
-        elif 'EMCI' in file:
             labels_test.append(1)
+        elif 'EMCI' in file:
+            labels_test.append(0)
         '''
         elif 'AD' in file:
             labels.append(2)
@@ -75,8 +75,8 @@ def load_data(data_train_folder_path,data_test_folder_path,batch_size):
     print(data_test.shape)
     # randomly shuffle the data
 
-    print("total train num: ",labels_train.shape[0]," eMCI num: ",(labels_train> 0).sum()," NC num: ",(labels_train<1).sum())
-    print("total test num: ",labels_test.shape[0]," eMCI num: ",(labels_test >0).sum()," NC num: ",(labels_test<1).sum())
+    print("total train num: ",labels_train.shape[0]," NC num: ",(labels_train> 0).sum()," MCI num: ",(labels_train<1).sum())
+    print("total test num: ",labels_test.shape[0]," NC num: ",(labels_test >0).sum()," MCI num: ",(labels_test<1).sum())
     # put the data in the dataloader
     train_data = torch.from_numpy(data_train)
     train_labels = torch.from_numpy(labels_train)
@@ -88,9 +88,9 @@ def load_data(data_train_folder_path,data_test_folder_path,batch_size):
     test_dataset = TensorDataset(test_data, test_labels)
     # dataloader
     train_loader = DataLoader(dataset=train_dataset,
-                              batch_size=batch_size, shuffle=True,drop_last=True)
+                              batch_size=batch_size, shuffle=True,drop_last=False)
     valid_loader = DataLoader(dataset=test_dataset,
-                              batch_size=batch_size, shuffle=True,drop_last=True)
+                              batch_size=batch_size, shuffle=True,drop_last=False)
     return train_loader, valid_loader
 
 
