@@ -3,7 +3,7 @@ import torch
 import random
 from torch import serialization
 from torch import autograd
-from torch.autograd import Variable
+from torch.autograd import Variable, variable
 import torch.nn
 import numpy as np
 import torch.nn.functional as F
@@ -20,16 +20,15 @@ class Transofrmer(torch.nn.Module):
         self.ROIs = ROIs
         self.q = q
 
-        #self.threshold = torch.tensor(0.00001)
-        #self.threshold = Variable(self.threshold.double(), requires_grad=True).to("cuda") 
+
 
         self.linear_q = torch.nn.Linear(BOLDs, q)
         #self.linear_k = torch.nn.Linear(BOLDs, q)
         self.relu_layer = torch.nn.ReLU(inplace=False)
 
-        self.bn=torch.nn.BatchNorm1d(100)
+        self.bn=torch.nn.BatchNorm1d(130)
 
-    def forward(self, x):
+    def forward(self, x,threshold):
         # affine and get Q & K
         x = x.double()
 
@@ -43,9 +42,9 @@ class Transofrmer(torch.nn.Module):
         #relation = relation/self.q
         relation=self.bn(relation)
         relation = F.softmax(relation,dim=2)
-        #relation =relation - self.threshold
+        relation =relation - threshold
 
-
+        #print(threshold)
         relation = self.relu_layer(relation)
         return relation
 
@@ -54,7 +53,7 @@ class VanillaGCN(torch.nn.Module):
     def __init__(self, features_in, features_out):
         super(VanillaGCN, self).__init__()
         self.W = torch.nn.Linear(features_in, features_out)
-        self.batch_normalization=torch.nn.BatchNorm1d(100)        
+        self.batch_normalization=torch.nn.BatchNorm1d(130)        
     def forward(self, Adjancy_Matrix, features):
 
         output = F.relu(
@@ -68,7 +67,7 @@ class VanillaResGCN(torch.nn.Module):
     def __init__(self, features_in, features_out):
         super(VanillaResGCN, self).__init__()
         self.W = torch.nn.Linear(features_in, features_out)
-        self.batch_normalization=torch.nn.BatchNorm1d(100)
+        self.batch_normalization=torch.nn.BatchNorm1d(130)
     def forward(self, Adjancy_Matrix, features):
         output1 = F.relu(
             self.batch_normalization(
@@ -105,7 +104,7 @@ Output the classfication informations
 class MLP(torch.nn.Module):
     def __init__(self, heads):
         super(MLP, self).__init__()
-        self.MLP1 = torch.nn.Linear(100*2,16)
+        self.MLP1 = torch.nn.Linear(130*2,2)
         self.MLP2 = torch.nn.Linear(16, 2)
         #self.MLP3 = torch.nn.Linear(16,2)
 
@@ -113,9 +112,9 @@ class MLP(torch.nn.Module):
 
         fusion_output1 = fusion_output.reshape(fusion_output.shape[0],-1)
         predict_labels = F.relu(self.MLP1(fusion_output1), inplace=False)
-        predict_labels1 = F.relu(self.MLP2(predict_labels), inplace=False)
+        #predict_labels1 = F.relu(self.MLP2(predict_labels), inplace=False)
         #predict_labels2 = F.relu(self.MLP3(predict_labels1), inplace=False)
-        return predict_labels1
+        return predict_labels
 
 
 class whole_network(torch.nn.Module):
@@ -127,15 +126,17 @@ class whole_network(torch.nn.Module):
         self.ROI_nums = ROI_nums
         self.BOLD_nums = BOLD_nums  # BOLD信号采样的个数
         self.q = q
+        self.threshold = torch.tensor(0.005)
+        self.threshold = torch.nn.parameter.Parameter(self.threshold,requires_grad=True)
         self.transofrmer = Transofrmer(batch_size, ROI_nums, BOLD_nums,
                                        q)
 
         # vanilla GCN
-        self.vanilla_gcn_layer1 = VanillaGCN(feature_nums, 64)
-        self.vanilla_gcn_layer2 = VanillaResGCN(64, 64)
-        self.vanilla_gcn_layer3 = VanillaGCN(64, 16)
-        self.vanilla_gcn_layer4 = VanillaResGCN(16 ,16)
-        self.vanilla_gcn_layer5 = VanillaGCN(16, 2)
+        self.vanilla_gcn_layer1 = VanillaGCN(feature_nums, 16)
+        self.vanilla_gcn_layer2 = VanillaResGCN(16, 16)
+        self.vanilla_gcn_layer3 = VanillaGCN(16, 4)
+        self.vanilla_gcn_layer4 = VanillaResGCN(4 ,4)
+        self.vanilla_gcn_layer5 = VanillaGCN(4, 2)
         self.vanilla_gcn_layer6 = VanillaResGCN(2, 2)
         self.vanilla_gcn_layer7 = VanillaGCN(32, 8)
         self.vanilla_gcn_layer8 = VanillaResGCN(8, 8)
@@ -160,7 +161,7 @@ class whole_network(torch.nn.Module):
                                    BOLD_signals)
 
         # relation[batch_size,heads,ROIs,ROIs]
-        relation_matrix= self.transofrmer(BOLD_signals)
+        relation_matrix= self.transofrmer(BOLD_signals,self.threshold)
 
 
         vanilla_GCN_output1 = self.vanilla_gcn_layer1(relation_matrix,BOLD_signals)
@@ -178,4 +179,9 @@ class whole_network(torch.nn.Module):
         # predict_labels:[batch_size,labels]
 
         predict_labels = (self.mlp(vanilla_GCN_output6))
+        '''predict_labels=vanilla_GCN_output6.reshape(-1,200)
+        print(predict_labels.shape)
+        predict_labels=F.adaptive_avg_pool1d(predict_labels,1)
+        print(predict_labels.shape)
+        predict_labels=predict_labels.reshape(-1,1)'''
         return predict_labels

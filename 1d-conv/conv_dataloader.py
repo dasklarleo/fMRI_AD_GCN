@@ -24,7 +24,7 @@ def load_data(data_train_folder_path,data_test_folder_path,batch_size):
             continue
         if 'NC' in file:#70%
             labels_train.append(1)
-        elif 'EMCI' in file:#30%
+        elif 'MCI' in file:#30%
             labels_train.append(0)
         '''
         elif 'AD' in file:
@@ -37,7 +37,7 @@ def load_data(data_train_folder_path,data_test_folder_path,batch_size):
             labels.append(5)
         '''
         ROI_BOLDs = scio.loadmat(data_train_folder_path+'/'+file)['ROI_ts']
-        data_train.append(ROI_BOLDs.T)
+        data_train.append(ROI_BOLDs)
 
     data_train = np.array(data_train)
     labels_train = np.array(labels_train)
@@ -54,7 +54,7 @@ def load_data(data_train_folder_path,data_test_folder_path,batch_size):
             continue
         if 'NC' in file:
             labels_test.append(1)
-        elif 'EMCI' in file:
+        elif 'MCI' in file:
             labels_test.append(0)
         '''
         elif 'AD' in file:
@@ -67,7 +67,7 @@ def load_data(data_train_folder_path,data_test_folder_path,batch_size):
             labels.append(5)
         '''
         ROI_BOLDs = scio.loadmat(data_test_folder_path+'/'+file)['ROI_ts']
-        data_test.append(ROI_BOLDs.T)
+        data_test.append(ROI_BOLDs)
 
     data_test = np.array(data_test)
     labels_test = np.array(labels_test)

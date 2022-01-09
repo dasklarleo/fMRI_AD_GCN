@@ -3,8 +3,8 @@ In this file the hyper-paramters will be set
 The training loops would also be set
 '''
 from os import access
-import dataloader
-import model
+import conv_dataloader
+import conv_model
 import logging
 import torch
 import torch.nn as nn
@@ -20,11 +20,11 @@ CUDA_LAUNCH_BLOCKING=1
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu") 
 print(device)
 # set parameters
-batch_size = 8
-ROI_nums = 100
-BOLD_nums = 130
+batch_size = 16
+ROI_nums = 130
+BOLD_nums = 100
 q = 16
-feature_nums = 130
+feature_nums = 100
 learning_rate = 0.001
 num_epoches = 10
 
@@ -76,6 +76,11 @@ def check_accuracy(loader,model):
     call=float(TP_total)/float(TP_total+FN_total)*100
     spe=float(TN_total)/float(FP_total+TN_total)*100
     f1.append((2*call*spe)/(call+spe))
+    if(sens[-1]>65 and specifity[-1]>65):
+        print(acc[-1])
+        print(specifity[-1])
+        torch.save(model,'/home/leosher/桌面/project/fMRI_AD_GCN/model/modelNC_eMCI')
+        exit()
     print(f'Got F1 score: {(2*call*spe)/(call+spe):.2f}')
 def get_logger(logger_name,log_file,level=logging.INFO):
 	logger = logging.getLogger(logger_name)
@@ -88,13 +93,13 @@ def get_logger(logger_name,log_file,level=logging.INFO):
 
 if __name__ == '__main__':
     # load data
-    train_loader,test_loader = dataloader.load_data("/home/leosher/data/pet/fMRI_BOLD/par100/NC_eMCI/train","/home/leosher/data/pet/fMRI_BOLD/par100/NC_eMCI/test",batch_size=batch_size)
+    train_loader,test_loader = conv_dataloader.load_data("/home/leosher/data/pet/fMRI_BOLD/par100/NC_eMCI/train","/home/leosher/data/pet/fMRI_BOLD/par100/NC_eMCI/test",batch_size=batch_size)
     log_backward='/home/leosher/桌面/project/fMRI_AD_GCN/log/log_gradient.log'
     log_loss='/home/leosher/桌面/project/fMRI_AD_GCN/log/log_loss.log'
     log_backward=get_logger('log_backward',log_backward)
     log_loss=get_logger('log_loss',log_loss)
     # initialize the network
-    net = model.whole_network(batch_size=batch_size,
+    net = conv_model.whole_network(batch_size=batch_size,
                               ROI_nums=ROI_nums,
                               BOLD_nums=BOLD_nums,
                               q=q,
@@ -103,10 +108,11 @@ if __name__ == '__main__':
     # loss and optimizer
     criterion=nn.CrossEntropyLoss()
     optimizer=optim.Adam(net.parameters(),lr=learning_rate)
+    
     loss_all=[]
     loss_average=0
     # train the network
-    for epoch in range(50):# one epoch means that the net has seen all the data in the dataset
+    for epoch in range(400):# one epoch means that the net has seen all the data in the dataset
         for batch_idx,(data,target) in enumerate(train_loader):
             net.train()
             data=data.to(device)
@@ -128,21 +134,20 @@ if __name__ == '__main__':
             '''
             optimizer.step()
             
+            
         loss_average=loss_average/(batch_idx+1)
         loss_all.append(loss_average)
         loss_average=0
-        if epoch%2==0:
-            print("*"*10)
-            print("epoch:", epoch)
-            check_accuracy(test_loader,net)
+        print("*"*10)
+        print("epoch:", epoch)
+        check_accuracy(test_loader,net)
     plt.plot(sens)
-    plt.savefig('/home/leosher/桌面/project/fMRI_AD_GCN/sens.jpg')
+    plt.plot(specifity)
+    plt.savefig('/home/leosher/桌面/project/fMRI_AD_GCN/sens&specifity.jpg')
     plt.figure()
     plt.plot(acc)
     plt.savefig('/home/leosher/桌面/project/fMRI_AD_GCN/acc.jpg')
-    plt.figure()
-    plt.plot(specifity)
-    plt.savefig('/home/leosher/桌面/project/fMRI_AD_GCN/specifity.jpg')
+
     plt.figure()
     plt.figure()      
     plt.plot(loss_all)
@@ -150,4 +155,4 @@ if __name__ == '__main__':
     plt.figure()
     plt.plot(f1)
     plt.savefig('/home/leosher/桌面/project/fMRI_AD_GCN/f1.jpg')
-    check_accuracy(train_loader,net)  
+    #check_accuracy(train_loader,net)  
